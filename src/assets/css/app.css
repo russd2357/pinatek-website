@@ -11696,3 +11696,11 @@ div[class^='bg-black'] .border-all, div[class^='bg-black'] .border-y, div[class^
 .padding-left-0, .no-padding-left {
   padding-left: 0 !important;
 }
+
+.padding-top-10 {
+  padding-top: 10px !important;
+}
+
+.padding-top-20 {
+  padding-top: 20ßpx !important;
+}
