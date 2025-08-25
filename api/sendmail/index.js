@@ -1,5 +1,13 @@
+const sgMail = require('@sendgrid/mail');
+
 module.exports = async function (context, req) {
     context.log('Contact form submission received');
+
+    // Configure SendGrid
+    const sendGridApiKey = process.env.SENDGRID_API_KEY;
+    if (sendGridApiKey) {
+        sgMail.setApiKey(sendGridApiKey);
+    }
 
     // Enable CORS
     context.res = {
@@ -44,7 +52,7 @@ module.exports = async function (context, req) {
             return;
         }
 
-        // Log the contact form data (in production, you'd send this via email service)
+        // Log the contact form data
         context.log('Contact form data:', {
             email: email,
             message: message,
@@ -52,9 +60,51 @@ module.exports = async function (context, req) {
             userAgent: req.headers['user-agent'] || 'Unknown'
         });
 
-        // TODO: Integrate with email service (SendGrid, Mailgun, etc.)
-        // For now, we'll just log and return success
-        
+        // Send email using SendGrid
+        if (sendGridApiKey) {
+            const toEmail = process.env.TO_EMAIL || 'info@pinatek.io';
+            const fromEmail = process.env.FROM_EMAIL || 'noreply@pinatek.io';
+            
+            const emailContent = {
+                to: toEmail,
+                from: fromEmail,
+                subject: 'New Contact Form Submission - pinatek.io',
+                text: `
+New contact form submission received:
+
+From: ${email}
+Timestamp: ${new Date().toISOString()}
+User Agent: ${req.headers['user-agent'] || 'Unknown'}
+
+Message:
+${message}
+                `.trim(),
+                html: `
+<h3>New Contact Form Submission</h3>
+<p><strong>From:</strong> ${email}</p>
+<p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+<p><strong>User Agent:</strong> ${req.headers['user-agent'] || 'Unknown'}</p>
+<h4>Message:</h4>
+<p>${message.replace(/\n/g, '<br>')}</p>
+                `.trim()
+            };
+
+            try {
+                await sgMail.send(emailContent);
+                context.log('Email sent successfully via SendGrid');
+            } catch (sendGridError) {
+                context.log.error('SendGrid error:', sendGridError);
+                
+                // If SendGrid fails, we'll still return success to the user
+                // but log the error for debugging
+                if (sendGridError.response) {
+                    context.log.error('SendGrid response:', sendGridError.response.body);
+                }
+            }
+        } else {
+            context.log.warn('SENDGRID_API_KEY not configured - email not sent');
+        }
+
         context.res.status = 200;
         context.res.body = {
             success: true,
