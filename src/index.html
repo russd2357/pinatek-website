@@ -178,6 +178,45 @@
 		<!-- </div> -->
 		<!-- end Blog section -->
 
+		<!-- Call to Action section -->
+		<div class="section padding-top-10">
+			<div class="container">
+				<div class="section-title">
+					<h2 class="font-weight-light margin-0">Ready to Get Started?</h2>
+					<p>Contact us today to see how we can help.</p>
+				</div>
+				<div class="row justify-content-center">
+					<div class="col-12 col-md-8 col-lg-6">
+						<form id="contactForm" class="contact-form">
+							<div class="row">
+								<div class="col-12">
+									<div class="form-group">
+										<label for="email" class="font-weight-normal">Email Address</label>
+										<input type="email" id="email" name="email" class="form-control" placeholder="Enter your email address" required>
+									</div>
+								</div>
+								<div class="col-12">
+									<div class="form-group">
+										<label for="message" class="font-weight-normal">Message</label>
+										<textarea id="message" name="message" class="form-control" rows="5" placeholder="Tell us about your project..." required></textarea>
+									</div>
+								</div>
+								<div class="col-12 text-center">
+									<button type="submit" class="button button-lg button-radius button-dark">
+										<span id="buttonText">Contact Us</span>
+										<span id="buttonSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+									</button>
+								</div>
+							</div>
+						</form>
+						<!-- Success/Error Messages -->
+						<div id="formMessage" class="alert" style="display: none; margin-top: 20px;"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- end Call to Action section -->
+
 		<footer>
 			<div class="footer bg-dark">
 				<div class="container">
@@ -241,5 +280,68 @@
 		<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
 		<script src="./assets/plugins/plugins.js"></script>
 		<script src="./assets/js/functions.js"></script>
+		
+		<!-- Contact Form JavaScript -->
+		<script>
+			document.getElementById('contactForm').addEventListener('submit', async function(e) {
+				e.preventDefault();
+				
+				const form = e.target;
+				const formData = new FormData(form);
+				const email = formData.get('email');
+				const message = formData.get('message');
+				
+				// UI elements
+				const button = form.querySelector('button[type="submit"]');
+				const buttonText = document.getElementById('buttonText');
+				const buttonSpinner = document.getElementById('buttonSpinner');
+				const messageDiv = document.getElementById('formMessage');
+				
+				// Show loading state
+				buttonText.style.display = 'none';
+				buttonSpinner.style.display = 'inline-block';
+				button.disabled = true;
+				messageDiv.style.display = 'none';
+				
+				try {
+					const response = await fetch('/api/sendmail', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							email: email,
+							message: message
+						})
+					});
+					
+					const result = await response.json();
+					
+					if (response.ok) {
+						// Success
+						messageDiv.className = 'alert alert-success';
+						messageDiv.textContent = result.message || 'Thank you for your message! We will get back to you soon.';
+						messageDiv.style.display = 'block';
+						form.reset(); // Clear the form
+					} else {
+						// Error from server
+						messageDiv.className = 'alert alert-danger';
+						messageDiv.textContent = result.error || 'There was an error sending your message. Please try again.';
+						messageDiv.style.display = 'block';
+					}
+				} catch (error) {
+					// Network or other error
+					console.error('Contact form error:', error);
+					messageDiv.className = 'alert alert-danger';
+					messageDiv.textContent = 'There was an error sending your message. Please check your connection and try again.';
+					messageDiv.style.display = 'block';
+				} finally {
+					// Reset button state
+					buttonText.style.display = 'inline';
+					buttonSpinner.style.display = 'none';
+					button.disabled = false;
+				}
+			});
+		</script>
 	</body>
 </html>
