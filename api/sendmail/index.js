@@ -1,12 +1,25 @@
 const sgMail = require('@sendgrid/mail');
 
 module.exports = async function (context, req) {
-    context.log('Contact form submission received');
-
-    // Configure SendGrid
+    context.log('🚀 Contact form submission received');
+    
+    // 🔍 DEBUG: Log environment configuration
     const sendGridApiKey = process.env.SENDGRID_API_KEY;
+    const toEmail =  'info@pinatek.io';
+    const fromEmail = 'info@pinatek.io';
+    
+    context.log('🔧 Environment Configuration:', {
+        hasApiKey: !!sendGridApiKey,
+        apiKeyLength: sendGridApiKey ? sendGridApiKey.length : 0,
+        toEmail: toEmail,
+        fromEmail: fromEmail
+    });
+
     if (sendGridApiKey) {
         sgMail.setApiKey(sendGridApiKey);
+        context.log('✅ SendGrid API key configured');
+    } else {
+        context.log('❌ SendGrid API key missing');
     }
 
     // Enable CORS
@@ -52,18 +65,17 @@ module.exports = async function (context, req) {
             return;
         }
 
-        // Log the contact form data
-        context.log('Contact form data:', {
+        // 🔍 DEBUG: Log the contact form data
+        context.log('📧 Contact form data:', {
             email: email,
-            message: message,
+            message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
             timestamp: new Date().toISOString(),
             userAgent: req.headers['user-agent'] || 'Unknown'
         });
 
-        // Send email using SendGrid
+        // 📤 Send email using SendGrid
         if (sendGridApiKey) {
-            const toEmail = process.env.TO_EMAIL || 'info@pinatek.io';
-            const fromEmail = process.env.FROM_EMAIL || 'noreply@pinatek.io';
+            context.log('🔄 Preparing email content...');
             
             const emailContent = {
                 to: toEmail,
@@ -89,20 +101,53 @@ ${message}
                 `.trim()
             };
 
+            // 🔍 DEBUG: Log email configuration
+            context.log('📋 Email Configuration:', {
+                to: emailContent.to,
+                from: emailContent.from,
+                subject: emailContent.subject,
+                textLength: emailContent.text.length,
+                htmlLength: emailContent.html.length
+            });
+
             try {
-                await sgMail.send(emailContent);
-                context.log('Email sent successfully via SendGrid');
-            } catch (sendGridError) {
-                context.log.error('SendGrid error:', sendGridError);
+                context.log('🚀 Sending email via SendGrid...');
                 
-                // If SendGrid fails, we'll still return success to the user
-                // but log the error for debugging
+                // This is where you can set a breakpoint for debugging
+                const sendGridResponse = await sgMail.send(emailContent);
+                
+                // 🔍 DEBUG: Log detailed SendGrid response
+                context.log('✅ SendGrid Response:', {
+                    statusCode: sendGridResponse[0]?.statusCode,
+                    headers: sendGridResponse[0]?.headers,
+                    body: sendGridResponse[0]?.body,
+                    messageId: sendGridResponse[0]?.headers?.['x-message-id']
+                });
+                
+                context.log('🎉 Email sent successfully via SendGrid');
+                
+            } catch (sendGridError) {
+                context.log.error('❌ SendGrid error occurred:', {
+                    message: sendGridError.message,
+                    code: sendGridError.code,
+                    statusCode: sendGridError.response?.status
+                });
+                
+                // 🔍 DEBUG: Detailed error analysis
                 if (sendGridError.response) {
-                    context.log.error('SendGrid response:', sendGridError.response.body);
+                    context.log.error('📋 SendGrid Error Details:', {
+                        status: sendGridError.response.status,
+                        statusText: sendGridError.response.statusText,
+                        headers: sendGridError.response.headers,
+                        data: sendGridError.response.data || sendGridError.response.body
+                    });
                 }
+                
+                // Re-throw error for proper error handling
+                throw sendGridError;
             }
         } else {
-            context.log.warn('SENDGRID_API_KEY not configured - email not sent');
+            context.log.warn('⚠️ SENDGRID_API_KEY not configured - email not sent');
         }
 
         context.res.status = 200;
@@ -112,13 +157,20 @@ ${message}
             timestamp: new Date().toISOString()
         };
 
+        context.log('✅ Function completed successfully');
+
     } catch (error) {
-        context.log.error('Error processing contact form:', error);
+        context.log.error('💥 Critical error processing contact form:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         
         context.res.status = 500;
         context.res.body = {
             error: 'Internal server error',
-            message: 'Please try again later'
+            message: 'Please try again later',
+            timestamp: new Date().toISOString()
         };
     }
 };
