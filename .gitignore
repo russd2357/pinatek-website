@@ -37,6 +37,8 @@ Thumbs.db
 __azurite_db_*.json
 .azurite/
 azurite_db_*.json
+__blobstorage__/*
+__queuestorage__/*
 
 # Logs
 *.log
